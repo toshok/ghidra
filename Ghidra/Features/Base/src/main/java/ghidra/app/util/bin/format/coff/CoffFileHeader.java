@@ -22,6 +22,7 @@ import java.util.List;
 import ghidra.app.util.bin.*;
 import ghidra.program.model.data.*;
 import ghidra.util.exception.DuplicateNameException;
+import ghidra.util.Msg;
 import ghidra.util.task.TaskMonitor;
 
 public class CoffFileHeader implements StructConverter {
@@ -44,6 +45,12 @@ public class CoffFileHeader implements StructConverter {
 		BinaryReader reader = getBinaryReader(provider);
 
 		f_magic = reader.readNextShort();
+
+		if (isCoffBigEndian()) {
+			reader = getBinaryReader(provider);
+			reader.readNextShort(); // now that we have a new reader, skip the magic
+		}
+
 		f_nscns = reader.readNextShort();
 		f_timdat = reader.readNextInt();
 		f_symptr = reader.readNextInt();
@@ -57,8 +64,12 @@ public class CoffFileHeader implements StructConverter {
 	}
 
 	private BinaryReader getBinaryReader(ByteProvider provider) {
-		BinaryReader reader = new BinaryReader(provider, true/*COFF is always LE!!!*/);
+		BinaryReader reader = new BinaryReader(provider, !isCoffBigEndian());
 		return reader;
+	}
+
+	private boolean isCoffBigEndian() {
+		return f_magic == CoffMachineType.IMAGE_FILE_MACHINE_APOLLO_M68K;
 	}
 
 	private boolean isCoffLevelOneOrTwo() {
